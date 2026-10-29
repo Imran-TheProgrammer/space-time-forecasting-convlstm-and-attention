@@ -1,0 +1,12 @@
+# Local Python environment and caches
+.venv-dl4stg-pa2/
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
+
+# Downloaded dataset
+data/
+
+# Supplied course material (not part of the submission)
+DL4STG_PA2.pdf
+Question1/
