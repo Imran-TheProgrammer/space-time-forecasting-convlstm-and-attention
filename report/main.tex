@@ -1,6 +1,6 @@
 % AI651 Assignment 2 report.
 % Build from this folder: pdflatex main.tex (run twice), or upload the
-% report/ and q1/ folders to Overleaf and compile main.tex.
+% report/, q1/ and Question2/ folders to Overleaf and compile report/main.tex.
 \documentclass[11pt,a4paper]{article}
 
 \usepackage[margin=2cm]{geometry}
@@ -13,9 +13,11 @@
 \usepackage{booktabs}
 \usepackage{enumitem}
 \usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
 \usepackage[hidelinks]{hyperref}
 
-\graphicspath{{../q1/}}
+\graphicspath{{../q1/}{../Question2/figures/}}
 \setlist{nosep,leftmargin=1.5em}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{4pt}
@@ -44,7 +46,7 @@
 \begin{figure}[h]
   \centering
   \includegraphics[width=\textwidth]{architecture.png}
-  \caption{Architecture. $B$ = batch of issuance times. 144 = 24 h of 10-minute steps. Node order: Reservoir, S1, T1, S2, S3, S4, R1, R2. All inputs use only data that has arrived by the issuance time $t_0$.}
+  \caption*{\textbf{Q1 architecture.} $B$ = batch of issuance times. 144 = 24 h of 10-minute steps. Node order: Reservoir, S1, T1, S2, S3, S4, R1, R2. All inputs use only data that has arrived by the issuance time $t_0$.}
 \end{figure}
 
 \textbf{Joining the sources.} (1) Every series is put on one 10-minute grid that ends at $t_0$. (2) Each source type has its own linear layer that maps its features to the same size $d=64$. (3) The results are stacked on a node axis: $[B,144,8,64]$. (4) Before attention, the time and node axes are flattened into one token axis: $[B,1152,64]$. The 6 future release tokens are added at the end: $[B,1158,64]$. (5) The heads read the token at time $t_0$ for S1--S4: $[B,4,64]$.
@@ -218,7 +220,60 @@ Record length and list of past floods & Confirms A4. If the record is short, the
 \end{longtable}
 
 % =====================================================================
-% Question 2 goes here.
+\newpage
+\section*{Question 2 -- Motion or Memory?}
+
+Code: \texttt{Question2/} in the repository. Every number below uses the 1,000 test videos (9,000--9,999) unless stated. Learned models are shown as \emph{mean (seed 0, seed 1)}. Figures use the seed-0 models. Hardware: one NVIDIA GeForce RTX 3070 Ti Laptop GPU (8 GB), PyTorch 2.11.0 (CUDA 12.8).
+
+% ---------------------------------------------------------------------
+\subsection*{1. Setup}
+
+\begin{table}[H]
+  \centering\small
+  \caption{Checks of the transformation and window functions (synthetic tensors).}
+  \input{tables/table1.tex}
+\end{table}
+
+All eight checks match exactly.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figure1.png}
+  \caption{Optical flow on the first 50 training videos (950 frame pairs, Farneback). (a) Direction of motion, 18 bins of 20$^\circ$; the dashed line is a uniform spread (1/18). (b) Speed in pixels per frame. Both show the fraction of kept pixels. Median speed: 3.32 pixels per frame. Pixels kept: 103,050.}
+\end{figure}
+
+\textbf{Q2.1} Yes. Mirrored and rotated motion is already familiar. In Figure 1(a) every 20$^\circ$ direction holds between 2.6\% and 8.2\% of the moving pixels; no direction is missing. Mirroring turns a direction $\theta$ into $180^\circ - \theta$, and a 90$^\circ$ rotation turns it into $\theta + 90^\circ$. Both only reshuffle the bars of a histogram that already covers every direction, so a mirrored or rotated video moves in directions the model has seen many times. The bars are uneven only because 50 videos contain about 100 digits, and each digit keeps one direction between bounces. Figure 1(b) shows a typical speed of 3.32 pixels per frame (half of all pixels between 3.00 and 3.89). So 2$\times$ is about 6.6 and 3$\times$ about 10.0 pixels per frame, both faster than almost anything in training. Where digits overlap, the flow is wrong, which likely explains the small bumps near 1 pixel per frame. Overlaps are short and happen in all directions, so they add a little noise but cannot fill or empty a whole direction. The answer does not change.
+
+\textbf{Q2.2} Mirror and rotation change only the \emph{appearance} of the digits; the motion statistics stay the same, because the direction histogram is already full (Q2.1) and the speed does not change. Rotation changes appearance more than mirroring. Speed-up does the opposite: it changes only the \emph{motion} (each step is $k$ times longer), while the digits look the same. So each test changes one thing and keeps the other fixed. If the model fails a mirror or rotation test, the cause is appearance. If it fails a speed test, the cause is motion. This is what makes them a controlled experiment.
+
+% ---------------------------------------------------------------------
+\subsection*{2. Baseline: ConvLSTM}
+
+%Q2-BASELINE-RESULTS
+
+\textbf{Q2.3} Model A's reach is \textbf{8 pixels per time step}. One cell of the folded $16\times16$ grid is 4 original pixels. Pixel-unshuffle, the $1\times1$ output convolution and pixel-shuffle do not move information. Only the two $3\times3$ convolutions do, and each moves it by at most one cell (4 pixels). Within one step $\tau$:
+\begin{itemize}
+  \item from the new input $u_\tau$: layer-1 convolution (1 cell) $\rightarrow h^{(1)}_\tau \rightarrow$ layer-2 convolution (1 cell) $\rightarrow h^{(2)}_\tau \rightarrow$ output: \textbf{2 cells};
+  \item from $h^{(1)}_{\tau-1}$: it enters the same layer-1 convolution, so the path is also \textbf{2 cells};
+  \item from $h^{(2)}_{\tau-1}$: only the layer-2 convolution, \textbf{1 cell};
+  \item the cell states $c^{(\ell)}_{\tau-1}$ are only multiplied pixel by pixel, so they add no distance (at most the 1 cell of layer 2 for $c^{(1)}$).
+\end{itemize}
+The longest path is 2 cells $= 2 \times 4 = 8$ pixels. A digit that moves more than about 8 pixels between frames cannot be linked to its old position in a single update.
+
+%Q2-4
+
+\textbf{Q2.5} (written and committed before any experiment in Testing the Baseline; copied unedited from \texttt{Question2/predictions/Q2.5.md})
+
+\begin{quote}\small
+\textbf{Mirror test.} Figure 1(a) shows digits moving in every direction, so mirrored motion is motion model A has already seen. Only the look of the digits is new (a mirrored 2 is not a 2). I expect model A to mostly pass: the digits should still move the right way, but their shapes may blur or drift back towards normal-looking digits. So E\_M should be a little higher than E(5), and C\_M small but not zero.
+
+\textbf{Rotation test.} The motion is again familiar, but rotated digits look even less like the training digits than mirrored ones. I expect model A to do worse than on the mirror test (C\_R $>$ C\_M and E\_R $>$ E\_M), while the digits still move in roughly the right direction.
+
+\textbf{Speed.} The median speed is about 3.3 pixels per frame, so 2x is about 6.6 and 3x about 10 pixels per frame. Model A can move information at most 8 pixels per step. At 2x the motion is still inside this reach, but the model never saw such fast motion in training, so I expect some extra error but no breakdown. At 3x most motion is beyond the reach, so I expect model A to break down there: blurred digits that stay near their old position or fade away.
+\end{quote}
+
+%Q2-TESTING
+
 
 % =====================================================================
 \end{document}

@@ -1,0 +1,32 @@
+model A seed 0: 480,784 parameters
+epoch  1  loss 0.04611  val E5 0.03931  8.6s
+epoch  2  loss 0.03967  val E5 0.03858  7.0s
+epoch  3  loss 0.03865  val E5 0.03751  7.0s
+epoch  4  loss 0.03708  val E5 0.03538  7.1s
+epoch  5  loss 0.03522  val E5 0.03371  7.1s
+epoch  6  loss 0.03368  val E5 0.03258  7.1s
+epoch  7  loss 0.03224  val E5 0.03118  7.1s
+epoch  8  loss 0.03121  val E5 0.03076  7.1s
+epoch  9  loss 0.03039  val E5 0.02975  7.2s
+epoch 10  loss 0.02968  val E5 0.02907  7.2s
+epoch 11  loss 0.02925  val E5 0.02901  7.2s
+epoch 12  loss 0.02876  val E5 0.02824  7.2s
+epoch 13  loss 0.02834  val E5 0.02788  7.2s
+epoch 14  loss 0.02797  val E5 0.02736  7.2s
+epoch 15  loss 0.02743  val E5 0.02702  7.2s
+epoch 16  loss 0.02706  val E5 0.02689  7.2s
+epoch 17  loss 0.02660  val E5 0.02621  7.2s
+epoch 18  loss 0.02621  val E5 0.02589  7.3s
+epoch 19  loss 0.02585  val E5 0.02555  7.3s
+epoch 20  loss 0.02547  val E5 0.02509  7.3s
+epoch 21  loss 0.02509  val E5 0.02505  7.3s
+epoch 22  loss 0.02481  val E5 0.02449  7.3s
+epoch 23  loss 0.02434  val E5 0.02415  7.3s
+epoch 24  loss 0.02410  val E5 0.02378  7.3s
+epoch 25  loss 0.02380  val E5 0.02349  7.3s
+epoch 26  loss 0.02359  val E5 0.02323  7.3s
+epoch 27  loss 0.02325  val E5 0.02311  7.3s
+epoch 28  loss 0.02299  val E5 0.02288  7.4s
+epoch 29  loss 0.02274  val E5 0.02258  7.3s
+epoch 30  loss 0.02254  val E5 0.02227  7.3s
+saved /home/dksg/AIEJ/DL4STG_PA2 2/Question2/runs/A_s0.pt

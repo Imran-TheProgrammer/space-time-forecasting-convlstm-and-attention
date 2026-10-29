@@ -40,9 +40,14 @@ def run(model, x, device):
     return model(x.to(device)).cpu()
 
 
-def digit_blobs(frame):
-    """Number of separate bright blobs (area >= 20 px) in a [1, 64, 64] float frame."""
+def digit_blobs(frame, gap=0):
+    """Number of separate bright blobs (area >= 20 px) in a [1, 64, 64] float frame.
+
+    With gap > 0, blobs closer than about `gap` pixels count as one.
+    """
     mask = (frame[0].numpy() > 0.3).astype(np.uint8)
+    if gap:
+        mask = cv2.dilate(mask, np.ones((gap + 1, gap + 1), np.uint8))
     count, _, stats, _ = cv2.connectedComponentsWithStats(mask)
     return int((stats[1:, cv2.CC_STAT_AREA] >= 20).sum())
 
@@ -53,7 +58,8 @@ def overlapping(frames):
 
 
 def separate(frames):
-    return all(digit_blobs(f) == 2 for f in frames)
+    """True if the two digits are at least about 4 pixels apart in every frame."""
+    return all(digit_blobs(f, gap=4) == 2 for f in frames)
 
 
 def load_choices():
@@ -76,7 +82,7 @@ def grid(rows, row_labels, column_labels, title, path, split_after=5):
             ax.set_yticks([])
             frame = row[c] if c < len(row) else None
             if frame is None:
-                ax.axis("off")
+                ax.set_frame_on(False)  # keeps the row label visible
                 continue
             ax.imshow(frame[0].clamp(0, 1).numpy(), cmap="gray", vmin=0, vmax=1)
             if c == split_after:
