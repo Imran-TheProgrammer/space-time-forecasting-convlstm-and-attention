@@ -56,7 +56,7 @@
 
 \textbf{Supplied facts (not assumptions):} levels at S1--S4 and T1 every 10 min; rain at R1 and R2 with timestamps and locations; recorded releases and announced schedules with announcement and effective times; station locations, river connections and distances; no data on the unmonitored tributary; no future rain or future levels at issuance.
 
-\begin{longtable}{|L{0.6cm}|L{8cm}|L{7.4cm}|}
+\begin{longtable}{|L{0.8cm}|L{7.5cm}|L{7.3cm}|}
 \hline
 \textbf{No.} & \textbf{Assumption and why it is reasonable} & \textbf{Effect on the design} \\ \hline
 \endhead
@@ -85,7 +85,7 @@ A13 & The river layout does not change, and water taken out or evaporated within
   \item \textbf{Outputs}: for each of S1--S4, the 10\%, 50\% and 90\% quantiles of the level at $t_0+60$. The 50\% value is the main forecast.
 \end{itemize}
 
-\begin{longtable}{|L{3.2cm}|L{2.3cm}|L{7.1cm}|L{3.1cm}|}
+\begin{longtable}{|L{3.1cm}|L{2.2cm}|L{6.8cm}|L{3.1cm}|}
 \hline
 \textbf{Name} & \textbf{Shape} & \textbf{Axes} & \textbf{Time coverage} \\ \hline
 \endhead
@@ -168,7 +168,7 @@ We train with Adam and use a later time period for validation (A4).
   \item \textbf{Reservoir releases.} All stations attend to past actual releases. The future plan tokens matter most for S1, which is closest. Stations further down are affected only when the travel time is under one hour.
 \end{itemize}
 
-\begin{longtable}{|L{8.2cm}|L{8.2cm}|}
+\begin{longtable}{|L{8.05cm}|L{8.05cm}|}
 \hline
 \textbf{Physical assumptions (fixed by us)} & \textbf{Learned from data} \\ \hline
 River connections and flow direction (mask $U$); river distances (node features); time order: only data that had arrived by $t_0$, plus announced releases; forecast = current level + change. &
@@ -191,7 +191,7 @@ Travel times and how they change with flow (attention weights over lags); how wa
 % ---------------------------------------------------------------------
 \subsection*{6. Uncertainty, limitations, and additional information}
 
-\begin{longtable}{|L{3cm}|L{5.8cm}|L{7.2cm}|}
+\begin{longtable}{|L{3cm}|L{5.6cm}|L{7cm}|}
 \hline
 \textbf{Issue} & \textbf{Effect on the forecast} & \textbf{Our response / what remains unresolved} \\ \hline
 \endhead
@@ -207,7 +207,7 @@ Quantile calibration & The 10--90\% band may be too narrow or too wide. & Checke
 
 \textbf{Additional information requests.}
 
-\begin{longtable}{|L{5.6cm}|L{6.6cm}|L{3.8cm}|}
+\begin{longtable}{|L{5.5cm}|L{6.4cm}|L{3.7cm}|}
 \hline
 \textbf{Request} & \textbf{How it helps} & \textbf{Usable without it?} \\ \hline
 \endhead
@@ -222,6 +222,7 @@ Record length and list of past floods & Confirms A4. If the record is short, the
 % =====================================================================
 \newpage
 \section*{Question 2 -- Motion or Memory?}
+\setcounter{table}{0}% the handout numbers Question 2's tables from 1
 
 Code: \texttt{Question2/} in the repository. Every number below uses the 1,000 test videos (9,000--9,999) unless stated. Learned models are shown as \emph{mean (seed 0, seed 1)}. Figures use the seed-0 models. Hardware: one NVIDIA GeForce RTX 3070 Ti Laptop GPU (8 GB), PyTorch 2.11.0 (CUDA 12.8).
 
@@ -231,7 +232,7 @@ Code: \texttt{Question2/} in the repository. Every number below uses the 1,000 t
 \begin{table}[H]
   \centering\small
   \caption{Checks of the transformation and window functions (synthetic tensors).}
-  \input{tables/table1.tex}
+  \resizebox{\textwidth}{!}{\input{tables/table1.tex}}
 \end{table}
 
 All eight checks match exactly.
@@ -272,7 +273,7 @@ The longest path is 2 cells $= 2 \times 4 = 8$ pixels. A digit that moves more t
 
 \textbf{Q2.4} Model A is much better than both reference predictors: its $E^{(5)}$ is 0.0220, against 0.0426 for Blank and 0.0641 for Copy-last (Table 2). Copy-last is the worst because a copied digit is wrong twice: it is missing where the digit went and present where the digit was. Model A's error grows steadily over the five horizons, from 0.0170 at $h=1$ to 0.0259 at $h=5$ (52\% higher), but even at $h=5$ it stays far below Blank. Blank does not change with $h$, while Copy-last grows faster than model A (0.0492 to 0.0732) because the digits move further from their last position. Figure 2 shows why model A's error grows: each prediction is fed back as the next input, so small errors add up and the digits get blurrier with every step. They stay in roughly the right places, but by frame 10 they are grey smudges. When digits overlap (video 9000), the model cannot tell which strokes belong to which digit. It predicts one merged smear that drifts upward, and the two digits never separate, even though the true 5 and 8 move apart.
 
-\textbf{Q2.5} (written and committed before any experiment in Testing the Baseline; copied unedited from \texttt{Question2/predictions/Q2.5.md})
+\textbf{Q2.5} (written and committed before any experiment in Testing the Baseline; copied unedited from \nolinkurl{Question2/predictions/Q2.5.md})
 
 \begin{quote}\small
 \textbf{Mirror test.} Figure 1(a) shows digits moving in every direction, so mirrored motion is motion model A has already seen. Only the look of the digits is new (a mirrored 2 is not a 2). I expect model A to mostly pass: the digits should still move the right way, but their shapes may blur or drift back towards normal-looking digits. So E\_M should be a little higher than E(5), and C\_M small but not zero.
@@ -339,7 +340,7 @@ The longest path is 2 cells $= 2 \times 4 = 8$ pixels. A digit that moves more t
 
 Models B, C and D follow the handout's model table and the same training protocol as model A. B adds symmetry augmentation, C adds speed augmentation, and D is my larger-reach design trained like C (described in Q2.12). D+B was not trained (see Section 5).
 
-\textbf{Q2.11} (written and committed before training B--D; copied unedited from \texttt{Question2/predictions/Q2.11.md})
+\textbf{Q2.11} (written and committed before training B--D; copied unedited from \nolinkurl{Question2/predictions/Q2.11.md})
 
 \begin{quote}\small
 Model B (mirror and rotation augmentation) will lower C\_M and C\_R and bring E\_M and E\_R close to E(5), because those failures come from the digits' appearance, but it will not help at 2x or 3x. Model C (speed augmentation) will fix much of the 2x failure, because 2x motion (about 6.6 pixels per frame) is inside model A's 8-pixel reach and was only unfamiliar, but it will still do badly at 3x (about 10 pixels per frame). Only model D, with a 12-pixel reach and speed augmentation, will also fix 3x, while neither C nor D will change C\_M or C\_R much.
@@ -421,4 +422,25 @@ because $T$ only moves pixels around, so it can be taken out of the average. The
 
 
 % =====================================================================
+\section*{Use of Generative AI}
+
+I used Claude (Anthropic), through Claude Code in VS Code, as a supporting tool throughout this assignment, for the following purposes:
+
+\begin{itemize}
+  \item \textbf{Understanding the assignment.} Claude explained each question in plain English: the Question 1 design brief and its companion notebook and, for Question 2, the data split, the windowing rules for each speed and start frame, the mirror and rotation transforms and the symmetry group $G$, the consistency gap $C_T$ and transformed error $E_T$, and the reach conventions used in Q2.3 and Q2.12.
+  \item \textbf{Question 1.} Claude helped draft the design (assumptions, data specification, architecture, training and evaluation) and drew the architecture diagram.
+  \item \textbf{Implementation support.} Claude helped write and debug the Python code in \texttt{Question2/}. This included:
+  \begin{itemize}
+    \item data loading, the train/validation/test split and the speed windows;
+    \item the mirror and rotation transforms;
+    \item the ConvLSTM models A--D and the training loop;
+    \item the evaluation metrics, the Blank and Copy-last baselines, the speed tests and the symmetrised forecaster;
+    \item the code that makes the tables, figures and GIFs.
+  \end{itemize}
+  It also helped design model D within the parameter budget, and checked parameter counts and reach.
+  \item \textbf{Report drafting.} Claude helped draft and edit the written answers, table layouts and figure captions from the experimental results, and fixed LaTeX layout issues such as overflowing tables and table numbering.
+\end{itemize}
+
+All experiments ran on my own computer (NVIDIA GeForce RTX 3070 Laptop GPU), where Claude Code ran the training and evaluation scripts. Every reported number comes from the code and result files in the GitHub repository. I reviewed all outputs, figures and report text before submission. The repository's commit history records that the Q2.5 and Q2.11 predictions were committed before the corresponding experiments were run, and they are reported unedited.
+
 \end{document}

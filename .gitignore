@@ -10,3 +10,11 @@ data/
 # Supplied course material (not part of the submission)
 DL4STG_PA2.pdf
 Question1/
+
+# LaTeX build files (main.pdf is kept)
+report/*.aux
+report/*.log
+report/*.out
+
+# Local notes for Claude Code (not published)
+CLAUDE.md
