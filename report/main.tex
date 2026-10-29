@@ -249,7 +249,17 @@ All eight checks match exactly.
 % ---------------------------------------------------------------------
 \subsection*{2. Baseline: ConvLSTM}
 
-%Q2-BASELINE-RESULTS
+\begin{table}[H]
+  \centering\small
+  \caption{Model A against the two reference predictors on the original test clips (1$\times$, $t=1$).}
+  \input{tables/table2.tex}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figure2.png}
+  \caption{Model A (seed 0) on three test videos: input frames 1--5, predicted frames 6--10, and the true frames 6--10 below. In video 9000 the two digits overlap.}
+\end{figure}
 
 \textbf{Q2.3} Model A's reach is \textbf{8 pixels per time step}. One cell of the folded $16\times16$ grid is 4 original pixels. Pixel-unshuffle, the $1\times1$ output convolution and pixel-shuffle do not move information. Only the two $3\times3$ convolutions do, and each moves it by at most one cell (4 pixels). Within one step $\tau$:
 \begin{itemize}
@@ -260,7 +270,7 @@ All eight checks match exactly.
 \end{itemize}
 The longest path is 2 cells $= 2 \times 4 = 8$ pixels. A digit that moves more than about 8 pixels between frames cannot be linked to its old position in a single update.
 
-%Q2-4
+\textbf{Q2.4} Model A is much better than both reference predictors: its $E^{(5)}$ is 0.0220, against 0.0426 for Blank and 0.0641 for Copy-last (Table 2). Copy-last is the worst because a copied digit is wrong twice: it is missing where the digit went and present where the digit was. Model A's error grows steadily over the five horizons, from 0.0170 at $h=1$ to 0.0259 at $h=5$ (52\% higher), but even at $h=5$ it stays far below Blank. Blank does not change with $h$, while Copy-last grows faster than model A (0.0492 to 0.0732) because the digits move further from their last position. Figure 2 shows why model A's error grows: each prediction is fed back as the next input, so small errors add up and the digits get blurrier with every step. They stay in roughly the right places, but by frame 10 they are grey smudges. When digits overlap (video 9000), the model cannot tell which strokes belong to which digit. It predicts one merged smear that drifts upward, and the two digits never separate, even though the true 5 and 8 move apart.
 
 \textbf{Q2.5} (written and committed before any experiment in Testing the Baseline; copied unedited from \texttt{Question2/predictions/Q2.5.md})
 
@@ -272,7 +282,142 @@ The longest path is 2 cells $= 2 \times 4 = 8$ pixels. A digit that moves more t
 \textbf{Speed.} The median speed is about 3.3 pixels per frame, so 2x is about 6.6 and 3x about 10 pixels per frame. Model A can move information at most 8 pixels per step. At 2x the motion is still inside this reach, but the model never saw such fast motion in training, so I expect some extra error but no breakdown. At 3x most motion is beyond the reach, so I expect model A to break down there: blurred digits that stay near their old position or fade away.
 \end{quote}
 
-%Q2-TESTING
+% ---------------------------------------------------------------------
+\subsection*{3. Testing the Baseline}
+
+\begin{table}[H]
+  \centering\small
+  \caption{Consistency gaps and transformed errors at 1$\times$, $t=1$. $C_T = \mathrm{MSE}(f(T(X)), T(f(X)))$, $E_T = \mathrm{MSE}(f(T(X)), T(Y))$.}
+  \input{tables/table3.tex}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.93\textwidth]{figure3_M1_video9933.png}\\[2pt]
+  \includegraphics[width=0.93\textwidth]{figure3_M2_video9382.png}
+  \caption{Model A (seed 0): the two test videos with the largest per-video $C_M$ (videos 9933 and 9382). Rows: (1) $X \mid f(X)$, (2) $M(X) \mid M(Y)$, (3) $M(X) \mid f(M(X))$, (4) $M(X) \mid M(f(X))$. GIFs: \texttt{Question2/gifs/figure3\_M1\_video9933.gif}, \texttt{Question2/gifs/figure3\_M2\_video9382.gif}.}
+\end{figure}
+
+\begin{figure}[H]
+  \ContinuedFloat
+  \centering
+  \includegraphics[width=0.93\textwidth]{figure3_R1_video9279.png}\\[2pt]
+  \includegraphics[width=0.93\textwidth]{figure3_R2_video9168.png}
+  \caption{(continued) The two test videos with the largest per-video $C_R$ (videos 9279 and 9168). Rows as above with $T = R$. GIFs: \texttt{Question2/gifs/figure3\_R1\_video9279.gif}, \texttt{Question2/gifs/figure3\_R2\_video9168.gif}.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figure4.png}
+  \caption{Per-video $C_M$ (a) and $C_R$ (b) of model A (seed 0) over the 1,000 test videos. Dashed red lines mark the Figure 3 videos.}
+\end{figure}
+
+\textbf{Q2.6} A model can be perfectly consistent and still useless. Blank and Copy-last have $C_M = C_R = 0$ exactly, because they never look at the motion: a blank frame stays blank and a copied frame is just the input moved around. Yet their transformed errors ($E_M = E_R = 0.0426$ and $0.0641$) are about two and three times model A's. A small $C_T$ only says that the model treats the transformed video the same way as the original. It does not say whether that treatment is correct. That is why $E_T$ must always be reported next to it.
+
+\textbf{Q2.7} Video 9279 under rotation (Figure 3, third panel). In the original video (row 1), a 9 and an 8 overlap, and model A predicts a blob that stretches up and down, which is roughly the direction the 9 is moving. Rotated, the true future (row 2) is the 9 moving to the right, away from the 8. Rotating the original prediction (row 4) gives a blob that stretches left and right, which is the right direction. But when the model sees the rotated video itself (row 3), it loses the direction completely: it predicts a round cloud that grows equally in every direction and gets a grid-like texture. The 9 never separates from the 8 and never moves right, and by $h=5$ neither digit can be recognised. So on the rotated video the model no longer knows which way to move the digits, and it blurs everything in place.
+
+\textbf{Q2.8} Yes, rotation is harder than mirroring for model A: $C_R = 0.00308$ against $C_M = 0.00181$, and $E_R = 0.0238$ against $E_M = 0.0227$ (both seeds agree; Table 3). The difference cannot come from the motion. Q2.1 showed that both transformations only move digits in directions that are already common in training, at the same speed. So the cause must be appearance (Q2.2). A mirrored digit keeps up as up, its strokes keep their direction, and many digits (0, 1, 8) look almost the same mirrored. A rotated digit has its vertical strokes turned horizontal, so it looks less like any digit the model has seen. The more unfamiliar the digits look, the worse the model follows them.
+
+\begin{table}[H]
+  \centering\small
+  \caption{Model A at faster playback ($t=1$). Across speeds only the first two horizons are compared. Blank for comparison: $E^{(2)} = 0.0426$, 0.0425, 0.0426 at 1$\times$, 2$\times$, 3$\times$.}
+  \input{tables/table4.tex}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figure5.png}
+  \caption{Model A (seed 0), test video 9029 at 1$\times$, 2$\times$ and 3$\times$: five input frames, the first two predicted frames and the first two true frames. The digits do not overlap in any shown true frame.}
+\end{figure}
+
+\textbf{Q2.9} Model A falls apart already at \textbf{2$\times$}. $E^{(2)}$ jumps from 0.0187 at 1$\times$ to 0.0451 at 2$\times$, which is worse than predicting a blank frame (0.0425), and 0.0531 at 3$\times$ (Table 4). This does not agree with my reach estimate, which said 2$\times$ (about 6.6 pixels per frame) is still inside the 8-pixel reach. The estimate missed two things. First, reach only says a path \emph{exists}. The paths near the edge of two stacked $3\times3$ kernels pass through few weights, so the distance the network can use well is shorter than 8 pixels. Second, a path is useless if the model never learned to use it: model A only ever saw digits move about 3.3 pixels per frame. In Figure 5, at 2$\times$ the predicted 2 stalls near its last input position while the true 2 moves on, and the 8 loses its shape. At 3$\times$ both digits stay where the last input frame left them and turn into grey blobs, while the true digits are far away. Stalling means the model cannot connect the old and new positions, so it keeps the digit where it last saw it. Blurring means it is unsure where the digit went, and the squared-error loss rewards spreading the guess over the possible places.
+
+\textbf{Q2.10} No. Model A was trained only at 1$\times$, so at 2$\times$ and 3$\times$ the motion is both unfamiliar and close to or beyond its reach, and these results cannot separate the two causes. Experiment: train the same architecture with speed augmentation (model C), so fast motion is no longer unfamiliar. If C fixes a speed, that failure was unfamiliar motion. If C still fails at a speed while a model with a larger reach, trained the same way (model D), succeeds, that failure was the architecture's reach.
+
+% ---------------------------------------------------------------------
+\subsection*{4. What Can Data Fix?}
+
+Models B, C and D follow the handout's model table and the same training protocol as model A. B adds symmetry augmentation, C adds speed augmentation, and D is my larger-reach design trained like C (described in Q2.12). D+B was not trained (see Section 5).
+
+\textbf{Q2.11} (written and committed before training B--D; copied unedited from \texttt{Question2/predictions/Q2.11.md})
+
+\begin{quote}\small
+Model B (mirror and rotation augmentation) will lower C\_M and C\_R and bring E\_M and E\_R close to E(5), because those failures come from the digits' appearance, but it will not help at 2x or 3x. Model C (speed augmentation) will fix much of the 2x failure, because 2x motion (about 6.6 pixels per frame) is inside model A's 8-pixel reach and was only unfamiliar, but it will still do badly at 3x (about 10 pixels per frame). Only model D, with a 12-pixel reach and speed augmentation, will also fix 3x, while neither C nor D will change C\_M or C\_R much.
+\end{quote}
+
+\begin{table}[H]
+  \centering
+  \caption{Models A--D on the test set ($t=1$). Training time is the mean over 30 epochs; inference time covers all 1,000 original test videos at batch size 32.}
+  \resizebox{\textwidth}{!}{\input{tables/table5.tex}}
+\end{table}
+
+\textbf{Q2.12} Model D is model A with one change: the $3\times3$ convolution of the \emph{second} ConvLSTM layer is dilated by 2 (padding 2). Its nine taps now sit at offsets of $-2$, 0 and $+2$ cells instead of $-1$, 0 and $+1$. Everything else is the same as model A: $4\times4$ patch folding, 64 hidden channels, $1\times1$ output convolution, the 9-step rollout without teacher forcing, and the training protocol (with speed augmentation, like C). Dilation adds no weights, so D has 480,784 parameters, well under the 721,176 limit. Reach, counted the same way as in Q2.3:
+\begin{itemize}
+  \item from the new input $u_\tau$: layer 1 (1 cell) then layer 2 (2 cells) $=$ \textbf{3 cells};
+  \item from $h^{(1)}_{\tau-1}$: the same two convolutions, \textbf{3 cells};
+  \item from $h^{(2)}_{\tau-1}$: only layer 2, \textbf{2 cells};
+  \item the cell states again add no distance of their own.
+\end{itemize}
+The longest path is $3 \times 4 = $ \textbf{12 pixels per step}, strictly more than model A's 8. This is enough for 3$\times$ motion (about 10 pixels per frame). I left layer 1 undilated so that the two layers together reach every offset from $-3$ to $+3$ cells with no gaps; dilating both layers would skip odd offsets and miss the small moves seen at 1$\times$.
+
+\textbf{Q2.13} Labels for the failures of model A (Table 5):
+\begin{itemize}
+  \item \textbf{Mirror and rotation gaps $\rightarrow$ appearance.} Model B changes only what the digits look like in training. It halves $C_R$ (0.00308 to 0.00146), lowers $C_M$ (0.00181 to 0.00116), and makes $E_M = E_R = E^{(5)} = 0.0228$, so transformed clips become as easy as the originals. Model C changes only the motion in training and leaves $C_R$ high (0.00256). D's gaps are also smaller, probably partly because its blurrier predictions differ less from each other in every case.
+  \item \textbf{Failure at 2$\times$ $\rightarrow$ unfamiliar motion.} Model C has model A's architecture and reach and only sees faster motion in training, and it cuts $E^{(2)}$ at 2$\times$ from 0.0451 to 0.0291. Model D's larger reach gives exactly the same 0.0291, so reach was not the limit at 2$\times$.
+  \item \textbf{Failure at 3$\times$ $\rightarrow$ mostly unfamiliar motion, with a small reach part.} C cuts $E^{(2)}$ at 3$\times$ from 0.0531 to 0.0336. D lowers it further to 0.0326, and both seeds agree (0.0328 and 0.0324 against 0.0339 and 0.0334). So the extra reach helps, but only a little.
+\end{itemize}
+Model C did \emph{not} do badly at 3$\times$, so my Q2.11 prediction was wrong there. The reason is that a 10-pixel move is only slightly beyond the 8-pixel reach, and a digit is about 20 pixels wide. An output pixel at the digit's new position can still see the back part of the digit in the input, so the network can move it with some error. If C had still failed at 3$\times$ while D succeeded, that would have shown a pure reach limit, and more training data could not fix it. Data only changes the weights on paths that already exist: if no path joins an input pixel to an output pixel within one step, no setting of the weights can make the output depend on it. Only a change to the architecture, such as a larger reach, can create that path.
+
+\textbf{Q2.14} Yes. Speed augmentation costs accuracy on the original 1$\times$ clips: $E^{(5)}$ rises from 0.0220 (A) to 0.0274 (C) and 0.0276 (D), about 25\% worse. With the same 30 epochs, only about a third of the training windows are at 1$\times$, and the same network must now handle three speeds. Symmetry augmentation costs much less: B's $E^{(5)}$ is 0.0228, about 4\% worse than A. For C and D I think the cost is worth it, because the gains at higher speeds are larger. At 2$\times$ the error falls by 35\% (0.0451 to 0.0291) and at 3$\times$ by 39\% (0.0531 to 0.0326), where model A was worse than a blank frame. For B the trade is smaller: it halves the consistency gap at a 4\% cost, but symmetrisation (Section 5) gives exact consistency with no training cost.
+
+% ---------------------------------------------------------------------
+\subsection*{5. The Final Model}
+
+\textbf{Why the symmetrised forecaster has $C_M = C_R = 0$.} Let $T$ be $M$ or $R$, which are both elements of $G$. Then
+\[
+  \bar f(T X) = \tfrac18 \sum_{g\in G} g^{-1}\big(f(gTX)\big).
+\]
+Put $h = gT$. As $g$ runs over all of $G$, so does $h$ (multiplying every element of a group by $T$ only reorders it), and $g^{-1} = T h^{-1}$. So
+\[
+  \bar f(TX) = \tfrac18 \sum_{h\in G} T h^{-1}\big(f(hX)\big) = T\Big(\tfrac18 \sum_{h\in G} h^{-1}\big(f(hX)\big)\Big) = T\big(\bar f(X)\big),
+\]
+because $T$ only moves pixels around, so it can be taken out of the average. Therefore $C_T = \mathrm{MSE}(\bar f(TX), T(\bar f(X))) = 0$ for any $f$. In my code the measured values are about $4\times10^{-17}$ (Table 6), which is rounding error from adding the eight predictions in a different order.
+
+\textbf{Choice of final model: symmetrised D.} Before seeing Table 5, I set a rule: train D+B only if B clearly lowered $E_M$ or $E_R$ while keeping 1$\times$ accuracy close to A. Table 5 does not support it. B left $E_M$ unchanged (0.0228 against 0.0227), lowered $E_R$ by only 4\%, and was 4\% worse on original clips. Symmetrisation already makes D exactly consistent, and D is by far the best model at 2$\times$ and 3$\times$. So the final model is model D wrapped as a symmetrised forecaster.
+
+\begin{table}[H]
+  \centering
+  \caption{Symmetrised models (the final model is symmetrised D). Training time is that of the underlying model (B or D); symmetrisation needs no training. Inference includes all eight transformations, forward passes, inverse transformations and the averaging.}
+  \resizebox{\textwidth}{!}{\input{tables/table6.tex}}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.93\textwidth]{figure6a_M1_video9933.png}\\[2pt]
+  \includegraphics[width=0.93\textwidth]{figure6a_M2_video9382.png}
+  \caption{(a) Figure 3 repeated with the final model (symmetrised D, seed 0) on the same videos, mirror cases. GIFs: \texttt{Question2/gifs/figure6a\_M1\_video9933.gif}, \texttt{Question2/gifs/figure6a\_M2\_video9382.gif}.}
+\end{figure}
+
+\begin{figure}[H]
+  \ContinuedFloat
+  \centering
+  \includegraphics[width=0.93\textwidth]{figure6a_R1_video9279.png}\\[2pt]
+  \includegraphics[width=0.93\textwidth]{figure6a_R2_video9168.png}
+  \caption{(a, continued) Rotation cases. GIFs: \texttt{Question2/gifs/figure6a\_R1\_video9279.gif}, \texttt{Question2/gifs/figure6a\_R2\_video9168.gif}.}
+\end{figure}
+
+\begin{figure}[H]
+  \ContinuedFloat
+  \centering
+  \includegraphics[width=\textwidth]{figure6b.png}
+  \caption{(b) Figure 5 repeated with the final model on the same test video (9029) at 1$\times$, 2$\times$ and 3$\times$.}
+\end{figure}
+
+\textbf{Q2.15} \emph{Consistency:} learned symmetry (model B) only lowers the gaps, to $C_M = 0.00116$ and $C_R = 0.00146$. Built-in symmetry makes them zero up to rounding ($\approx 4\times10^{-17}$) for both B and D. Only the built-in version is exact, because its consistency follows from the proof above for \emph{any} weights. Augmentation only rewards consistency on the training videos, so it is never guaranteed on new ones. \emph{Accuracy:} symmetrised B is slightly better than B on original clips (0.0222 against 0.0228) and on transformed clips ($E_M = E_R = 0.0222$ against 0.0228). Symmetrised D equals D on original clips (0.0276) and is slightly better on rotated clips (0.0276 against 0.0286). \emph{Cost:} augmentation adds about 3\% to training time (7.54 against 7.32 seconds per epoch) and nothing at inference. Symmetrisation needs no training but makes inference about 6.6 times slower (2.31 against 0.35 seconds for 1,000 videos), because every input is run eight times. \emph{Blur:} the average of eight predictions is blurry wherever they disagree. So I would expect built-in symmetry to hurt when the base model is much better on upright digits than on rotated or mirrored ones: then good and bad predictions get mixed. It did not hurt here. On original clips symmetrised B is better than B, and symmetrised D is within 0.3\% of D for each seed (0.0276 for both on average), so the eight predictions agreed well enough.
+
+\textbf{Q2.16} No, not fully. In Figure 6(a) for video 9279 (rotation), rows 3 and 4 are now identical, so the disagreement from Q2.7 is gone. Symmetrisation fixed that part. But the forecast itself is still wrong: the final model predicts one grey blob that grows over the horizons, and the 9 never separates from the 8 or moves right. The blob is even blurrier than model A's. D's larger reach and speed training did not fix this, because this failure comes from the overlapping digits (Q2.4), not from speed or appearance.
+
+\textbf{Q2.17} Final verdict. Partly. The final model has learned a real motion rule, not just the look of the training videos. It is exactly consistent under mirroring and rotation. Its error on transformed clips equals its error on the originals. With speed training it follows digits at 2$\times$ and 3$\times$ ($E^{(2)} = 0.0291$ and 0.0325 against 0.0426 for Blank), and in Figure 6(b) its blobs land near the true positions. To convince a skeptic, I would test motion the model never saw in training, such as 4$\times$ or 1.5$\times$ speed, or letters instead of digits. If the error stays close, the model is moving shapes, not recalling digits. One test it still fails is overlap: when two digits cross (video 9279), it merges them into one growing blob instead of keeping them apart. It also blurs the digits' shapes after a few frames.
 
 
 % =====================================================================
